@@ -1,0 +1,42 @@
+Resources:
+  MyDBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AllocatedStorage: 5
+      DBInstanceClass: db.t2.micro
+      Engine: postgres
+      EngineVersion: 11.5
+      MasterUsername: !Sub '{{resolve:ssm:/MyApp/DBUsername:1}}'
+      MasterUserPassword: !Sub '{{resolve:ssm-secure:/MyApp/DBPassword:1}}'
+      DBSubnetGroupName: !Ref MyDBSubnetGroup
+      VPCSecurityGroups:
+        - !Ref MyDBSecurityGroup
+      MultiAZ: false
+      PubliclyAccessible: true
+      StorageType: gp2
+      DBName: STD21033
+    MyDBSubnetGroup:
+      Type: AWS::RDS::DBSubnetGroup
+      Properties:
+        DBSubnetGroupName: my-db-subnet-group
+        SubnetIds:
+          - subnet-0123456789abcdef0
+          - subnet-0123456789abcdef1
+    MyDBSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: Security group for RDS database instance
+        VpcId: vpc-0123456789abcdef
+        SecurityGroupIngress:
+          - IpProtocol: tcp
+            FromPort: 5432
+            ToPort: 5432
+            CidrIp: 192.168.3.4/24
+          - IpProtocol: tcp
+            FromPort: 5432
+            ToPort: 5432
+            SourceSecurityGroupId: !Ref MyEC2SecurityGroup
+  Outputs:
+    MyDatabaseEndpointAddress:
+      Description: The endpoint address of the RDS database
+      Value: !Sub 'jdbc:postgresql://${192.168.3.4}:${MyDBInstance.Endpoint.Port}/${MyDBInstance.DBName}'
